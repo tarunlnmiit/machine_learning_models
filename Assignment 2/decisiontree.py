@@ -15,14 +15,13 @@ The output file generated will be present in the same directory as this python f
 """
 
 import argparse
-import csv
-import numpy as np
 import pandas as pd
+from collections import OrderedDict
 from math import log
+from pprint import pprint
 
 
 def main():
-    # eps = np.finfo(float).eps # change it to avoid plagiarism
     args = parser.parse_args()
     file, output = args.data, args.output
 
@@ -30,26 +29,29 @@ def main():
     dataset.columns = ['att' + str(i) for i in range(len(dataset.iloc[0]))]
 
     classAttribute = dataset.columns.values[-1]
-    treeClassifier(dataset, classAttribute)
+    attributes = dataset.columns[:-1]
+    pprint(treeClassifier(dataset, classAttribute, attributes))
 
 
-def treeClassifier(dataset, classAttribute):
+def treeClassifier(dataset, classAttribute, attributes):
     classLabels = dataset[classAttribute].unique()
-    if classLabels <= 1:
+    if len(classLabels) <= 1:
         return dataset[classAttribute].unique()[0]
 
+    rootNode, entropy = findCorrectNode(dataset)
 
-    rootNode = findCorrectNode(dataset)
+    decisionTree = OrderedDict()
+    decisionTree[rootNode + ', entropy: ' + str(entropy)] = OrderedDict()
+
     nodeValues = dataset[rootNode].unique()
+    newAttributes = dataset.drop(rootNode, axis=1).columns.values[:-1]
 
     for value in nodeValues:
         subDataset = calculateSubDataset(dataset, rootNode, value)
-        nodeEntropy = calculateTotalEntropy(subDataset)
+        subBranch = treeClassifier(subDataset, classAttribute, newAttributes)
 
-        for attribute in subDataset.drop(rootNode, axis=1).columns.values[:-1]:
-            calculateAttributeEntropy(subDataset.drop(rootNode, axis=1),
-                                      attribute)
-
+        decisionTree[rootNode + ', entropy: ' + str(entropy)][value] = subBranch
+    return decisionTree
 
 
 def calculateSubDataset(dataset, node, value):
@@ -59,16 +61,16 @@ def calculateSubDataset(dataset, node, value):
 
 def findCorrectNode(dataset):
     informationGainValues = []
-    totalEntropy = calculateTotalEntropy(dataset)
+    totalEntropy = calculateNodeEntropy(dataset)
     for attribute in dataset.columns.values[:-1]:
         attributeEntropy = calculateAttributeEntropy(dataset, attribute)
         informationGainValues.append(totalEntropy - attributeEntropy)
 
     maxInfoGainIndex = informationGainValues.index(max(informationGainValues))
-    return dataset.columns.values[maxInfoGainIndex]
+    return dataset.columns.values[maxInfoGainIndex], totalEntropy
 
 
-def calculateTotalEntropy(dataset):
+def calculateNodeEntropy(dataset):
     # calculate total entropy
     classAttribute = dataset.columns.values[-1]
     entropy = 0
