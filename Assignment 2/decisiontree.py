@@ -33,8 +33,9 @@ def main():
 
     classAttribute = dataset.columns.values[-1]
     attributes = dataset.columns[:-1]
-    decisionTree = treeClassifier(dataset, classAttribute, attributes)
-    totalEntropy = calculateNodeEntropy(dataset)
+    logBase = len(dataset[classAttribute].unique())
+    decisionTree = treeClassifier(dataset, classAttribute, attributes, logBase)
+    totalEntropy = calculateNodeEntropy(dataset, logBase)
     # pprint(decisionTree)
 
     xml = dicttoxml(decisionTree, custom_root='tree', attr_type=False)
@@ -60,13 +61,13 @@ def main():
     tree.write(output, xml_declaration=False)
 
 
-def treeClassifier(dataset, classAttribute, attributes):
+def treeClassifier(dataset, classAttribute, attributes, logBase):
     classLabels = dataset[classAttribute].unique()
     if len(classLabels) <= 1:
         return dataset[classAttribute].unique()[0]
 
-    rootNode, entropy, attributeFeatureEntropies = findCorrectNode(dataset)
-    print(attributeFeatureEntropies, entropy)
+    rootNode, entropy, attributeFeatureEntropies = findCorrectNode(dataset, logBase)
+    # print(attributeFeatureEntropies, entropy)
 
     decisionTree = OrderedDict()
     # decisionTree[rootNode] = OrderedDict()
@@ -76,7 +77,7 @@ def treeClassifier(dataset, classAttribute, attributes):
 
     for value in nodeValues:
         subDataset = calculateSubDataset(dataset, rootNode, value)
-        subBranch = treeClassifier(subDataset, classAttribute, newAttributes)
+        subBranch = treeClassifier(subDataset, classAttribute, newAttributes, logBase)
 
         decisionTree[rootNode + ' , ' + value + ' , ' +
                      str(attributeFeatureEntropies[rootNode][value])] = subBranch
@@ -86,16 +87,17 @@ def treeClassifier(dataset, classAttribute, attributes):
 
 def calculateSubDataset(dataset, node, value):
     subDataset = dataset[dataset[node] == value]
+    # print(subDataset)
     return subDataset
 
 
-def findCorrectNode(dataset):
+def findCorrectNode(dataset, logBase):
     informationGainValues = []
-    totalEntropy = calculateNodeEntropy(dataset)
+    totalEntropy = calculateNodeEntropy(dataset, logBase)
     attributeFeatureEntropies = {}
     for attribute in dataset.columns.values[:-1]:
         attributeEntropy, featureEntropies = calculateAttributeEntropy(
-            dataset, attribute)
+            dataset, attribute, logBase)
         attributeFeatureEntropies[attribute] = featureEntropies
         informationGainValues.append(totalEntropy - attributeEntropy)
     # print(informationGainValues)
@@ -103,7 +105,7 @@ def findCorrectNode(dataset):
     return dataset.columns.values[maxInfoGainIndex], totalEntropy, attributeFeatureEntropies
 
 
-def calculateNodeEntropy(dataset):
+def calculateNodeEntropy(dataset, logBase):
     # calculate total entropy
     classAttribute = dataset.columns.values[-1]
     entropy = 0
@@ -112,12 +114,12 @@ def calculateNodeEntropy(dataset):
         fraction = dataset[classAttribute].value_counts()[value] / len(
             dataset.iloc[:, -1])
         if fraction != 0 and len(classLabels) > 1:
-            entropy += -fraction * log(fraction, len(classLabels))
+            entropy -= fraction * log(fraction, logBase)
     # print('node', entropy)
     return entropy
 
 
-def calculateAttributeEntropy(dataset, attribute):
+def calculateAttributeEntropy(dataset, attribute, logBase):
     # calculate attribute entropy
     classAttribute = dataset.columns.values[-1]
     classLabels = dataset[classAttribute].unique()
@@ -131,11 +133,13 @@ def calculateAttributeEntropy(dataset, attribute):
                 dataset.iloc[:, -1] == label])
             denominator = len(dataset[attribute]
                               [dataset[attribute] == feature])
+            # print(numerator, denominator)
             fraction = numerator / denominator
             if fraction != 0 and len(classLabels) > 1:
-                featureEntropy += -fraction * log(fraction, len(classLabels))
+                featureEntropy -= fraction * log(fraction, logBase)
+            # print(featureEntropy)
         attributeFraction = denominator / len(dataset)
-        attributeEntropy += -attributeFraction * featureEntropy
+        attributeEntropy -= attributeFraction * featureEntropy
         featureEntropies[feature] = featureEntropy
         # print('f', featureEntropy, 'a', attributeEntropy)
 
