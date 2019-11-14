@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """
-[Monday 13-15] ML Programming Assignment 1
-Tarun Gupta, Shipra Dureja
+[Monday 13-15] ML Programming Assignment 2
+Tarun Gupta - 225900
+Shipra Dureja - 225816
 
-Command to run this batch gradient descent model:
-python3 linearregr.py --data <filepath> --learningRate <learning Rate> --threshold <Threshold Value>
+Command to run this decision tree model:
+python3 decisiontree.py --data <filepath> --output <filename>
 
 Input: csv File
-Output: csv File
-Output File naming convention: "solution_<input csv name>_learningRate_<learning Rate value>_threshold_<threshold value>.csv"
-Output File Format(rounded to 4 decimal places): iteration_number,weight0,weight1,weight2,...,weightN,sum_of_squared_errors
-
-The output file generated will be present in the same directory as this python file (that is parallel to this file)
+Output: xml File
 """
 
 import argparse
@@ -19,9 +16,7 @@ import pandas as pd
 from collections import OrderedDict
 from dicttoxml import dicttoxml
 from math import log
-from pprint import pprint
 from lxml import etree
-from xml.etree import ElementTree
 
 
 def main():
@@ -36,7 +31,6 @@ def main():
     logBase = len(dataset[classAttribute].unique())
     decisionTree = treeClassifier(dataset, classAttribute, attributes, logBase)
     totalEntropy = calculateNodeEntropy(dataset, logBase)
-    # pprint(decisionTree)
 
     xml = dicttoxml(decisionTree, custom_root='tree', attr_type=False)
     with open(output, 'wb') as file:
@@ -67,10 +61,8 @@ def treeClassifier(dataset, classAttribute, attributes, logBase):
         return dataset[classAttribute].unique()[0]
 
     rootNode, entropy, attributeFeatureEntropies = findCorrectNode(dataset, logBase)
-    # print(attributeFeatureEntropies, entropy)
 
     decisionTree = OrderedDict()
-    # decisionTree[rootNode] = OrderedDict()
 
     nodeValues = dataset[rootNode].unique()
     newAttributes = dataset.drop(rootNode, axis=1).columns.values[:-1]
@@ -87,7 +79,6 @@ def treeClassifier(dataset, classAttribute, attributes, logBase):
 
 def calculateSubDataset(dataset, node, value):
     subDataset = dataset[dataset[node] == value]
-    # print(subDataset)
     return subDataset
 
 
@@ -100,7 +91,6 @@ def findCorrectNode(dataset, logBase):
             dataset, attribute, logBase)
         attributeFeatureEntropies[attribute] = featureEntropies
         informationGainValues.append(totalEntropy - attributeEntropy)
-    # print(informationGainValues)
     maxInfoGainIndex = informationGainValues.index(max(informationGainValues))
     return dataset.columns.values[maxInfoGainIndex], totalEntropy, attributeFeatureEntropies
 
@@ -115,7 +105,6 @@ def calculateNodeEntropy(dataset, logBase):
             dataset.iloc[:, -1])
         if fraction != 0 and len(classLabels) > 1:
             entropy -= fraction * log(fraction, logBase)
-    # print('node', entropy)
     return entropy
 
 
@@ -133,15 +122,14 @@ def calculateAttributeEntropy(dataset, attribute, logBase):
                 dataset.iloc[:, -1] == label])
             denominator = len(dataset[attribute]
                               [dataset[attribute] == feature])
-            # print(numerator, denominator)
+
             fraction = numerator / denominator
             if fraction != 0 and len(classLabels) > 1:
                 featureEntropy -= fraction * log(fraction, logBase)
-            # print(featureEntropy)
+
         attributeFraction = denominator / len(dataset)
         attributeEntropy -= attributeFraction * featureEntropy
         featureEntropies[feature] = featureEntropy
-        # print('f', featureEntropy, 'a', attributeEntropy)
 
     return abs(attributeEntropy), featureEntropies
 
