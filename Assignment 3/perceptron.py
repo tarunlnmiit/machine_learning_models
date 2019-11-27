@@ -22,12 +22,15 @@ def main():
     args = parser.parse_args()
     file, outputFile = args.data, args.output
     learningRate = 1
-    with open(file) as csvFile:
-        reader = csv.reader(csvFile, delimiter='\t')
+    with open(file) as tsvFile:
+        reader = csv.reader(tsvFile, delimiter='\t')
         X = []
         Y = []
         for row in reader:
-            X.append([1.0] + row[1:])
+            if row[-1] == '':
+                X.append([1.0] + row[1:-1])
+            else:
+                X.append([1.0] + row[1:])
             if row[0] == 'A':
                 Y.append([1])
             else:
@@ -37,31 +40,37 @@ def main():
     X = np.array(X).astype(float)
     Y = np.array(Y).astype(float)
     W = np.zeros(X.shape[1]).astype(float)
-    W = W.reshape(X.shape[1], 1).round(4)
+    W = W.reshape(X.shape[1], 1).astype(float)
 
-    f_x = calculatePredicatedValue(X, W)
-    sse_old = calculateSSE(Y, f_x)
+    normalError = calculateNormalBatchLearning(X, Y, W, learningRate)
+    annealError = calculateAnnealBatchLearning(X, Y, W, learningRate)
 
-    with open(outputFile, 'w', newline='') as csvFile:
-        writer = csv.writer(csvFile, delimiter=',', quoting=csv.QUOTE_NONE, escapechar='')
-        writer.writerow([*[0], *["{0:.4f}".format(val) for val in W.T[0]], *["{0:.4f}".format(sse_old)]])
+    with open(outputFile, 'w') as tsvFile:
+        writer = csv.writer(tsvFile, delimiter='\t')
+        writer.writerow(normalError)
+        writer.writerow(annealError)
 
+
+def calculateNormalBatchLearning(X, Y, W, learningRate):
+    e = []
+    for i in range(101):
+        f_x = calculatePredicatedValue(X, W)
+        errorCount = calculateError(Y, f_x)
+        e.append(errorCount)
         gradient, W = calculateGradient(W, X, Y, f_x, learningRate)
+    return e
 
-        iteration = 1
-        while True:
-            f_x = calculatePredicatedValue(X, W)
-            sse_new = calculateSSE(Y, f_x)
 
-            if abs(sse_new - sse_old) > threshold:
-                writer.writerow([*[iteration], *["{0:.4f}".format(val) for val in W.T[0]], *["{0:.4f}".format(sse_new)]])
-                gradient, W = calculateGradient(W, X, Y, f_x, learningRate)
-                iteration += 1
-                sse_old = sse_new
-            else:
-                break
-        writer.writerow([*[iteration], *["{0:.4f}".format(val) for val in W.T[0]], *["{0:.4f}".format(sse_new)]])
-    print("Output File Name: " + outputFile)
+def calculateAnnealBatchLearning(X, Y, W, learningRate):
+    e = []
+    for i in range(101):
+        f_x = calculatePredicatedValue(X, W)
+        errorCount = calculateError(Y, f_x)
+        e.append(errorCount)
+        learningRate = 1 / (i + 1)
+        gradient, W = calculateGradient(W, X, Y, f_x, learningRate)
+    return e
+
 
 
 def calculateGradient(W, X, Y, f_x, learningRate):
@@ -70,17 +79,25 @@ def calculateGradient(W, X, Y, f_x, learningRate):
     # gradient = np.array([float("{0:.4f}".format(val)) for val in gradient])
     temp = np.array(learningRate * gradient).reshape(W.shape)
     W = W + temp
-    return gradient, W
+    return gradient, W.astype(float)
 
 
-def calculateSSE(Y, f_x):
-    sse = np.sum(np.square(f_x - Y))
+def calculateError(Y, f_x):
+    errorCount = 0
+    for i in range(len(f_x)):
+        if Y[i][0] != f_x[i][0]:
+            errorCount += 1
 
-    return sse
+    return errorCount
 
 
 def calculatePredicatedValue(X, W):
     f_x = np.dot(X, W)
+    for i in range(len(f_x)):
+        if f_x[i][0] > 0:
+            f_x[i][0] = 1
+        else:
+            f_x[i][0] = 0
     return f_x
 
 
