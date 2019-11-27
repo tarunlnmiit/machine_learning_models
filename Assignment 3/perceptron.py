@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """
-[Monday 13-15] ML Programming Assignment 1
+[Monday 13-15] ML Programming Assignment 3
 Tarun Gupta, Shipra Dureja
 
 Command to run this batch gradient descent model:
-python3 linearregr.py --data <filepath> --learningRate <learning Rate> --threshold <Threshold Value>
+python3 perceptron.py --data <filepath> --output <output file>
 
-Input: csv File
-Output: csv File
-Output File naming convention: "solution_<input csv name>_learningRate_<learning Rate value>_threshold_<threshold value>.csv"
-Output File Format(rounded to 4 decimal places): iteration_number,weight0,weight1,weight2,...,weightN,sum_of_squared_errors
-
-The output file generated will be present in the same directory as this python file (that is parallel to this file)
+Input: tsv File
+Output: tsv File
 """
 import argparse
 import csv
@@ -70,7 +66,6 @@ def calculateAnnealBatchLearning(X, Y, W, learningRate):
         learningRate = 1 / (i + 1)
         gradient, W = calculateGradient(W, X, Y, f_x, learningRate)
     return e
-
 
 
 def calculateGradient(W, X, Y, f_x, learningRate):
