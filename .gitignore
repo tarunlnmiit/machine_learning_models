@@ -1,3 +1,7 @@
 /.ipynb_checkpoints/
 /Chain_Gradient-descent.ipynb
 /.idea/
+/AML_Assignments/Assignment_1/20_newsgroups/
+/AML_Assignments/Assignment_1/.idea/
+/AML_Assignments/Assignment_1/.ipynb_checkpoints/
+*.pdf
